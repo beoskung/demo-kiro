@@ -8,15 +8,14 @@ import type { PrismaService } from '../database/prisma.service.js';
 import { type AuthenticatedRequest, Public, Roles } from './auth.decorators.js';
 import { AuthGuard } from './auth.guard.js';
 import { createSessionToken, SESSION_COOKIE } from './session-token.js';
+import { makeUser } from './test-user.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const employee: User = {
+const employee = makeUser('STORE_EMPLOYEE', {
   id: 'u1',
   email: 'store@erp.local',
   name: 'Store Employee',
-  role: 'STORE_EMPLOYEE',
-  storeId: 'store-01',
-};
+});
 
 class RoutesUnderTest {
   @Public()

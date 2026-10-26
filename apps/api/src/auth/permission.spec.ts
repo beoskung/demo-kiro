@@ -1,14 +1,7 @@
-import { type Permission, type Role, type User } from '@erp/contracts';
+import { type Permission, type Role } from '@erp/contracts';
 import { describe, expect, it } from 'vitest';
 import { ensurePermission, ensureStoreScope } from './permission.js';
-
-const user = (role: Role, storeId: string | null = null): User => ({
-  id: 'u1',
-  email: `${role.toLowerCase()}@erp.local`,
-  name: role,
-  role,
-  storeId,
-});
+import { makeUser } from './test-user.js';
 
 /**
  * The permission matrix at the enforcement boundary: each role gets at least one allowed and one
@@ -27,15 +20,13 @@ describe('ensurePermission', () => {
     { allowed: Permission; denied: Permission },
   ][]) {
     it(`lets a ${role} call ${allowed}`, () => {
-      const storeId = role === 'STORE_EMPLOYEE' ? 'store-01' : null;
-      expect(() => ensurePermission(user(role, storeId), allowed)).not.toThrow();
+      expect(() => ensurePermission(makeUser(role), allowed)).not.toThrow();
     });
 
     it(`rejects a ${role} calling ${denied} with the envelope`, () => {
-      const storeId = role === 'STORE_EMPLOYEE' ? 'store-01' : null;
       const error = (() => {
         try {
-          ensurePermission(user(role, storeId), denied);
+          ensurePermission(makeUser(role), denied);
         } catch (e) {
           return e as { code: string; data: { category: string; message: string } };
         }
@@ -49,19 +40,19 @@ describe('ensurePermission', () => {
   }
 
   it('does NOT give an administrator automatic transaction approval', () => {
-    expect(() => ensurePermission(user('ADMINISTRATOR'), 'purchase-order:approve')).toThrow();
+    expect(() => ensurePermission(makeUser('ADMINISTRATOR'), 'purchase-order:approve')).toThrow();
   });
 });
 
 describe('ensureStoreScope', () => {
   it('lets a store employee act on their own store', () => {
-    expect(() => ensureStoreScope(user('STORE_EMPLOYEE', 'store-01'), 'store-01')).not.toThrow();
+    expect(() => ensureStoreScope(makeUser('STORE_EMPLOYEE'), 'store-01')).not.toThrow();
   });
 
   it('rejects a store employee acting on another store with the envelope', () => {
     const error = (() => {
       try {
-        ensureStoreScope(user('STORE_EMPLOYEE', 'store-01'), 'store-02');
+        ensureStoreScope(makeUser('STORE_EMPLOYEE'), 'store-02');
       } catch (e) {
         return e as { code: string; data: { category: string; message: string } };
       }
@@ -73,11 +64,11 @@ describe('ensureStoreScope', () => {
   });
 
   it('lets a manager act on any store (organization-wide)', () => {
-    expect(() => ensureStoreScope(user('MANAGER'), 'store-01')).not.toThrow();
-    expect(() => ensureStoreScope(user('MANAGER'), 'store-02')).not.toThrow();
+    expect(() => ensureStoreScope(makeUser('MANAGER'), 'store-01')).not.toThrow();
+    expect(() => ensureStoreScope(makeUser('MANAGER'), 'store-02')).not.toThrow();
   });
 
   it('lets an administrator act on any store (organization-wide)', () => {
-    expect(() => ensureStoreScope(user('ADMINISTRATOR'), 'store-99')).not.toThrow();
+    expect(() => ensureStoreScope(makeUser('ADMINISTRATOR'), 'store-99')).not.toThrow();
   });
 });

@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { ErrorEnvelopeSchema, type Role, type User } from '@erp/contracts';
+import { ErrorEnvelopeSchema, type Role } from '@erp/contracts';
 import { hashPassword } from '@erp/database';
 import { call } from '@orpc/server';
 import type { Response } from 'express';
@@ -8,15 +8,10 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../database/prisma.service.js';
 import { AuthController } from './auth.controller.js';
 import { SESSION_COOKIE, verifySessionToken } from './session-token.js';
+import { makeUser } from './test-user.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const admin: User = {
-  id: 'u1',
-  email: 'admin@erp.local',
-  name: 'Admin User',
-  role: 'ADMINISTRATOR',
-  storeId: null,
-};
+const admin = makeUser('ADMINISTRATOR', { id: 'u1', email: 'admin@erp.local', name: 'Admin User' });
 
 async function createController(findUnique = vi.fn()) {
   const moduleRef = await Test.createTestingModule({
@@ -77,13 +72,11 @@ describe('AuthController', () => {
   });
 
   it('gives a store employee a single assigned store and no store to others', async () => {
-    const storeUser = {
+    const storeUser = makeUser('STORE_EMPLOYEE', {
       id: 'u2',
       email: 'store@erp.local',
       name: 'Store Employee',
-      role: 'STORE_EMPLOYEE' as const,
-      storeId: 'store-01',
-    };
+    });
     const controller = await createController(
       vi.fn().mockResolvedValue({ ...storeUser, passwordHash }),
     );
