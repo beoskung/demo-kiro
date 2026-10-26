@@ -24,9 +24,9 @@ describe('UserSchema store assignment', () => {
   });
 
   it('rejects a store employee without a store', () => {
-    expect(
-      UserSchema.safeParse({ ...base, role: 'STORE_EMPLOYEE', storeId: null }).success,
-    ).toBe(false);
+    expect(UserSchema.safeParse({ ...base, role: 'STORE_EMPLOYEE', storeId: null }).success).toBe(
+      false,
+    );
     expect(UserSchema.safeParse({ ...base, role: 'STORE_EMPLOYEE' }).success).toBe(false);
   });
 
@@ -42,9 +42,9 @@ describe('UserSchema store assignment', () => {
   });
 
   it('rejects a manager that is bound to a store', () => {
-    expect(
-      UserSchema.safeParse({ ...base, role: 'MANAGER', storeId: 'store-01' }).success,
-    ).toBe(false);
+    expect(UserSchema.safeParse({ ...base, role: 'MANAGER', storeId: 'store-01' }).success).toBe(
+      false,
+    );
   });
 });
 

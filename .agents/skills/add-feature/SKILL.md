@@ -95,7 +95,7 @@ Register the module in `src/app.module.ts`. `PrismaService` is global, no import
 - Auth: every route already requires a signed-in user. Imports come from `../auth/auth.decorators.js`:
 
   ```ts
-  @Roles('ADMIN')                                   // optional: only these roles (else 403)
+  @Roles('ADMINISTRATOR')                           // optional: only these roles (else 403)
   @Implement(contract.customers.create)
   create(@CurrentUser() user: User) {               // User from @erp/contracts
     return implement(contract.customers.create).handler(({ input }) =>

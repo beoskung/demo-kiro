@@ -54,10 +54,12 @@ The first start takes a few minutes. When the logs settle:
 
 Sign in with one of the demo accounts (they are also listed on the login page):
 
-| Email             | Password   | Role    |
-| ----------------- | ---------- | ------- |
-| `admin@erp.local` | `password` | `ADMIN` |
-| `staff@erp.local` | `password` | `STAFF` |
+| Email                  | Password   | Role                 |
+| ---------------------- | ---------- | -------------------- |
+| `admin@erp.local`      | `password` | `ADMINISTRATOR`      |
+| `purchasing@erp.local` | `password` | `PURCHASING_OFFICER` |
+| `store@erp.local`      | `password` | `STORE_EMPLOYEE`     |
+| `manager@erp.local`    | `password` | `MANAGER`            |
 
 The home page then shows a **System status** card. **API ✅ / Database ✅** means the full chain works: React → typed client → Vite proxy → NestJS → Prisma → Postgres.
 
@@ -70,7 +72,7 @@ Stop with `Ctrl+C`, or `docker compose down`. Add `-v` to also delete the databa
 Auth is deliberately minimal and only meant for the workshop. There is no sign-up or password reset: users come from `packages/database/prisma/seed.ts`, which runs every time the api starts.
 
 - `POST /api/auth/login` checks the password and sets an httpOnly cookie holding the user id, signed with `AUTH_SECRET` and valid for 7 days. `auth.logout` clears it, and `auth.me` returns the current user.
-- Every API route requires a signed-in user unless it is marked `@Public()`. `@Roles('ADMIN')` limits a route to certain roles (`apps/api/src/auth`).
+- Every API route requires a signed-in user unless it is marked `@Public()`. `@Roles('ADMINISTRATOR')` limits a route to certain roles (`apps/api/src/auth`).
 - In the web app, every page under `RequireAuth` redirects to `/login` when nobody is signed in or any request returns 401 (`apps/web/src/lib/auth.ts`).
 
 ### Browse the database
