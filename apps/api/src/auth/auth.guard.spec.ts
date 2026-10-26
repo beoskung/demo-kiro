@@ -10,7 +10,13 @@ import { AuthGuard } from './auth.guard.js';
 import { createSessionToken, SESSION_COOKIE } from './session-token.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const staff: User = { id: 'u1', email: 'staff@erp.local', name: 'Staff User', role: 'STAFF' };
+const employee: User = {
+  id: 'u1',
+  email: 'store@erp.local',
+  name: 'Store Employee',
+  role: 'STORE_EMPLOYEE',
+  storeId: 'store-01',
+};
 
 class RoutesUnderTest {
   @Public()
@@ -18,7 +24,7 @@ class RoutesUnderTest {
 
   closed() {}
 
-  @Roles('ADMIN')
+  @Roles('ADMINISTRATOR')
   adminOnly() {}
 }
 
@@ -53,13 +59,13 @@ describe('AuthGuard', () => {
   });
 
   it('rejects a protected route without a session', async () => {
-    const { run } = setup(staff);
+    const { run } = setup(employee);
 
     await expect(run('closed').result).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('rejects a tampered cookie', async () => {
-    const { run, findUnique } = setup(staff);
+    const { run, findUnique } = setup(employee);
 
     await expect(
       run('closed', `${SESSION_COOKIE}=u1.9999999999999.forged`).result,
@@ -76,15 +82,15 @@ describe('AuthGuard', () => {
   });
 
   it('attaches the signed-in user to the request', async () => {
-    const { run } = setup(staff);
+    const { run } = setup(employee);
     const { request, result } = run('closed', sessionCookie('u1'));
 
     await expect(result).resolves.toBe(true);
-    expect(request.user).toEqual(staff);
+    expect(request.user).toEqual(employee);
   });
 
   it('rejects a user without the required role', async () => {
-    const { run } = setup(staff);
+    const { run } = setup(employee);
 
     await expect(run('adminOnly', sessionCookie('u1')).result).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -92,7 +98,7 @@ describe('AuthGuard', () => {
   });
 
   it('allows a user with the required role', async () => {
-    const { run } = setup({ ...staff, role: 'ADMIN' });
+    const { run } = setup({ ...employee, role: 'ADMINISTRATOR', storeId: null });
 
     await expect(run('adminOnly', sessionCookie('u1')).result).resolves.toBe(true);
   });
