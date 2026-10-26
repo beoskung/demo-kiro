@@ -6,7 +6,13 @@ import { createQueryClient } from '@/lib/query-client';
 import { mockApi, unauthorized } from '@/test/mock-api';
 import { LoginPage } from './login';
 
-const admin = { id: '1', email: 'admin@erp.local', name: 'Admin User', role: 'ADMIN' };
+const admin = {
+  id: '1',
+  email: 'admin@erp.local',
+  name: 'Admin User',
+  role: 'ADMINISTRATOR',
+  storeId: null,
+};
 
 function renderLogin(url = '/login') {
   const router = createMemoryRouter(
@@ -62,9 +68,9 @@ describe('LoginPage', () => {
     mockApi({ 'GET /auth/me': { user: null } });
 
     renderLogin();
-    fireEvent.click(await screen.findByText('staff@erp.local'));
+    fireEvent.click(await screen.findByText('store@erp.local'));
 
-    expect(screen.getByLabelText('Email')).toHaveValue('staff@erp.local');
+    expect(screen.getByLabelText('Email')).toHaveValue('store@erp.local');
     expect(screen.getByLabelText('Password')).toHaveValue('password');
   });
 
