@@ -54,7 +54,7 @@ function paginate({ page, pageSize }: PaginationInput) {
 export class MasterDataController {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async writeAudit(
+  private async recordAudit(
     actorId: string,
     action: string,
     entity: string,
@@ -66,14 +66,41 @@ export class MasterDataController {
     });
   }
 
+  /**
+   * Run an audited write: execute `write`, then append an audit record capturing the outcome.
+   * A success is audited with the created/updated entity's id; a failure is audited as `failure`
+   * (entity id unknown) and the original error is rethrown. Every authorized write — whether it
+   * lands or is refused by the database — leaves an audit trail (NFR-03).
+   */
+  private async auditedWrite<T extends { id: string }>(
+    actorId: string,
+    action: string,
+    entity: string,
+    write: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      const result = await write();
+      await this.recordAudit(actorId, action, entity, result.id, 'success');
+      return result;
+    } catch (error) {
+      await this.recordAudit(actorId, action, entity, '', 'failure');
+      throw error;
+    }
+  }
+
   @Implement(contract.masterData.stores.create)
   createStore(@CurrentUser() user: User) {
     return implement(contract.masterData.stores.create).handler(async ({ input }) => {
       ensurePermission(user, 'master-data:manage');
-      const store = (await this.prisma.store.create({
-        data: { code: input.code, name: input.name },
-      })) as StoreRow;
-      await this.writeAudit(user.id, 'store.create', 'store', store.id, 'success');
+      const store = await this.auditedWrite(
+        user.id,
+        'store.create',
+        'store',
+        () =>
+          this.prisma.store.create({
+            data: { code: input.code, name: input.name },
+          }) as Promise<StoreRow>,
+      );
       return toStore(store);
     });
   }
@@ -82,11 +109,16 @@ export class MasterDataController {
   updateStore(@CurrentUser() user: User) {
     return implement(contract.masterData.stores.update).handler(async ({ input }) => {
       ensurePermission(user, 'master-data:manage');
-      const store = (await this.prisma.store.update({
-        where: { id: input.id },
-        data: { code: input.code, name: input.name },
-      })) as StoreRow;
-      await this.writeAudit(user.id, 'store.update', 'store', store.id, 'success');
+      const store = await this.auditedWrite(
+        user.id,
+        'store.update',
+        'store',
+        () =>
+          this.prisma.store.update({
+            where: { id: input.id },
+            data: { code: input.code, name: input.name },
+          }) as Promise<StoreRow>,
+      );
       return toStore(store);
     });
   }
@@ -112,10 +144,15 @@ export class MasterDataController {
   createSupplier(@CurrentUser() user: User) {
     return implement(contract.masterData.suppliers.create).handler(async ({ input }) => {
       ensurePermission(user, 'master-data:manage');
-      const supplier = (await this.prisma.supplier.create({
-        data: { code: input.code, name: input.name, contact: input.contact },
-      })) as SupplierRow;
-      await this.writeAudit(user.id, 'supplier.create', 'supplier', supplier.id, 'success');
+      const supplier = await this.auditedWrite(
+        user.id,
+        'supplier.create',
+        'supplier',
+        () =>
+          this.prisma.supplier.create({
+            data: { code: input.code, name: input.name, contact: input.contact },
+          }) as Promise<SupplierRow>,
+      );
       return toSupplier(supplier);
     });
   }
@@ -124,11 +161,16 @@ export class MasterDataController {
   updateSupplier(@CurrentUser() user: User) {
     return implement(contract.masterData.suppliers.update).handler(async ({ input }) => {
       ensurePermission(user, 'master-data:manage');
-      const supplier = (await this.prisma.supplier.update({
-        where: { id: input.id },
-        data: { code: input.code, name: input.name, contact: input.contact },
-      })) as SupplierRow;
-      await this.writeAudit(user.id, 'supplier.update', 'supplier', supplier.id, 'success');
+      const supplier = await this.auditedWrite(
+        user.id,
+        'supplier.update',
+        'supplier',
+        () =>
+          this.prisma.supplier.update({
+            where: { id: input.id },
+            data: { code: input.code, name: input.name, contact: input.contact },
+          }) as Promise<SupplierRow>,
+      );
       return toSupplier(supplier);
     });
   }

@@ -301,3 +301,45 @@ describe('MasterDataController — audit access', () => {
     expect(prisma.auditRecord.findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('MasterDataController — audit outcome on failure', () => {
+  it('records a failure audit record when a store write fails, then rethrows', async () => {
+    const controller = await createController();
+    prisma.store.create.mockRejectedValue(new Error('unique constraint'));
+
+    const error = await call(
+      controller.createStore(admin),
+      { code: 'B01', name: 'Branch 01' },
+      { context: {} },
+    ).catch((e) => e);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(prisma.auditRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: 'admin-1',
+        action: 'store.create',
+        entity: 'store',
+        outcome: 'failure',
+      }),
+    });
+  });
+
+  it('records a failure audit record when a supplier edit fails', async () => {
+    const controller = await createController();
+    prisma.supplier.update.mockRejectedValue(new Error('not found'));
+
+    await call(
+      controller.updateSupplier(admin),
+      { id: 'sup1', code: 'SUP01', name: 'Supplier 01', contact: '' },
+      { context: {} },
+    ).catch((e) => e);
+
+    expect(prisma.auditRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'supplier.update',
+        entity: 'supplier',
+        outcome: 'failure',
+      }),
+    });
+  });
+});
