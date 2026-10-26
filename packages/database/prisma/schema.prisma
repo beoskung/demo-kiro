@@ -35,3 +35,43 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
+/// A physical store/branch. Code and name are maintained by an administrator and referenced by
+/// later documents (purchase orders, receipts, sales). Code is unique across the organization.
+model Store {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A supplier that purchase orders reference. Code is unique; contact is free-form (optional).
+model Supplier {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  contact   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Whether an audited action succeeded or was refused.
+enum AuditOutcome {
+  success
+  failure
+}
+
+/// An append-only audit record for a sensitive write: who acted, on what entity, and the outcome.
+/// Access is permission-restricted at the API. There is no edit or delete route.
+model AuditRecord {
+  id        String       @id @default(cuid())
+  actorId   String
+  action    String
+  entity    String
+  entityId  String
+  outcome   AuditOutcome
+  createdAt DateTime     @default(now())
+
+  @@index([entity, createdAt])
+}
