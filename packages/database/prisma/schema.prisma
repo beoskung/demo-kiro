@@ -15,8 +15,10 @@ datasource db {
 }
 
 enum Role {
-  ADMIN
-  STAFF
+  ADMINISTRATOR
+  PURCHASING_OFFICER
+  STORE_EMPLOYEE
+  MANAGER
 }
 
 model User {
@@ -25,7 +27,11 @@ model User {
   name         String
   /// Written by hashPassword() from @erp/database. Never returned by the API.
   passwordHash String
-  role         Role     @default(STAFF)
+  role         Role     @default(STORE_EMPLOYEE)
+  /// Store assignment. A STORE_EMPLOYEE is bound to exactly one store; a MANAGER and an
+  /// ADMINISTRATOR are organization-wide and leave this null. A full Store model arrives
+  /// with the master-data ticket; for now this holds the store's identifier.
+  storeId      String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

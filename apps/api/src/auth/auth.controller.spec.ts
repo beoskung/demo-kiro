@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import type { User } from '@erp/contracts';
+import { ErrorEnvelopeSchema, type Role } from '@erp/contracts';
 import { hashPassword } from '@erp/database';
 import { call } from '@orpc/server';
 import type { Response } from 'express';
@@ -8,9 +8,10 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../database/prisma.service.js';
 import { AuthController } from './auth.controller.js';
 import { SESSION_COOKIE, verifySessionToken } from './session-token.js';
+import { makeUser } from './test-user.js';
 
 const secret = 'test-secret-that-is-at-least-32-characters';
-const admin: User = { id: 'u1', email: 'admin@erp.local', name: 'Admin User', role: 'ADMIN' };
+const admin = makeUser('ADMINISTRATOR', { id: 'u1', email: 'admin@erp.local', name: 'Admin User' });
 
 async function createController(findUnique = vi.fn()) {
   const moduleRef = await Test.createTestingModule({
@@ -55,24 +56,68 @@ describe('AuthController', () => {
     expect(options).toMatchObject({ httpOnly: true, sameSite: 'lax' });
   });
 
-  it('rejects a wrong password without setting a cookie', async () => {
+  it.each<{ email: string; role: Role; storeId: string | null }>([
+    { email: 'admin@erp.local', role: 'ADMINISTRATOR', storeId: null },
+    { email: 'purchasing@erp.local', role: 'PURCHASING_OFFICER', storeId: null },
+    { email: 'store@erp.local', role: 'STORE_EMPLOYEE', storeId: 'store-01' },
+    { email: 'manager@erp.local', role: 'MANAGER', storeId: null },
+  ])('signs in demo account $email with role $role', async ({ email, role, storeId }) => {
+    const user = { id: email, email, name: email, role, storeId };
+    const controller = await createController(vi.fn().mockResolvedValue({ ...user, passwordHash }));
+
+    const result = await call(controller.login(fakeResponse()), { email, password: 'password' });
+
+    expect(result.role).toBe(role);
+    expect(result.storeId).toBe(storeId);
+  });
+
+  it('gives a store employee a single assigned store and no store to others', async () => {
+    const storeUser = makeUser('STORE_EMPLOYEE', {
+      id: 'u2',
+      email: 'store@erp.local',
+      name: 'Store Employee',
+    });
+    const controller = await createController(
+      vi.fn().mockResolvedValue({ ...storeUser, passwordHash }),
+    );
+
+    const result = await call(controller.login(fakeResponse()), {
+      email: 'store@erp.local',
+      password: 'password',
+    });
+
+    expect(result.storeId).toBe('store-01');
+  });
+
+  it('rejects a wrong password with the structured error envelope and no cookie', async () => {
     const controller = await createController(
       vi.fn().mockResolvedValue({ ...admin, passwordHash }),
     );
     const res = fakeResponse();
 
-    await expect(
-      call(controller.login(res), { email: 'admin@erp.local', password: 'wrong' }),
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    const error = await call(controller.login(res), {
+      email: 'admin@erp.local',
+      password: 'wrong',
+    }).catch((e) => e);
+
+    expect(error.code).toBe('UNAUTHORIZED');
+    const envelope = ErrorEnvelopeSchema.parse(error.data);
+    expect(envelope.category).toBe('correct-input');
+    expect(envelope.message).toMatch(/[\u0E00-\u0E7F]/); // contains Thai characters
+    expect(JSON.stringify(error.data)).not.toMatch(/stack|prisma|at /i);
     expect(res.cookie).not.toHaveBeenCalled();
   });
 
-  it('rejects an unknown email', async () => {
+  it('rejects an unknown email with the structured error envelope', async () => {
     const controller = await createController(vi.fn().mockResolvedValue(null));
 
-    await expect(
-      call(controller.login(fakeResponse()), { email: 'nobody@erp.local', password: 'password' }),
-    ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+    const error = await call(controller.login(fakeResponse()), {
+      email: 'nobody@erp.local',
+      password: 'password',
+    }).catch((e) => e);
+
+    expect(error.code).toBe('UNAUTHORIZED');
+    expect(ErrorEnvelopeSchema.safeParse(error.data).success).toBe(true);
   });
 
   it('clears the cookie on logout', async () => {

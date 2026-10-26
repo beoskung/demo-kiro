@@ -7,7 +7,13 @@ import { createQueryClient } from '@/lib/query-client';
 import { mockApi, unauthorized } from '@/test/mock-api';
 import { RequireAuth } from './require-auth';
 
-const staff = { id: '2', email: 'staff@erp.local', name: 'Staff User', role: 'STAFF' };
+const staff = {
+  id: '2',
+  email: 'store@erp.local',
+  name: 'Store Employee',
+  role: 'STORE_EMPLOYEE',
+  storeId: 'store-01',
+};
 
 function LoginStub() {
   const location = useLocation();

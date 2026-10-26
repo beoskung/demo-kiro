@@ -2,7 +2,9 @@ import { authContract } from './auth.js';
 import { healthContract } from './health.js';
 
 export * from './auth.js';
+export * from './errors.js';
 export * from './health.js';
+export * from './permissions.js';
 
 /**
  * The single source of truth for the HTTP API.

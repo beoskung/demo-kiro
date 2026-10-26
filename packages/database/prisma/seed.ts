@@ -5,9 +5,22 @@ const prisma = createPrismaClient(
 );
 
 // Demo accounts for the workshop (also shown on the login page). Re-running the seed resets them.
+// A store employee is bound to one store; a manager and an administrator are organization-wide.
 const demoUsers = [
-  { email: 'admin@erp.local', name: 'Admin User', role: Role.ADMIN },
-  { email: 'staff@erp.local', name: 'Staff User', role: Role.STAFF },
+  { email: 'admin@erp.local', name: 'Admin User', role: Role.ADMINISTRATOR, storeId: null },
+  {
+    email: 'purchasing@erp.local',
+    name: 'Purchasing Officer',
+    role: Role.PURCHASING_OFFICER,
+    storeId: null,
+  },
+  {
+    email: 'store@erp.local',
+    name: 'Store Employee',
+    role: Role.STORE_EMPLOYEE,
+    storeId: 'store-01',
+  },
+  { email: 'manager@erp.local', name: 'Manager User', role: Role.MANAGER, storeId: null },
 ];
 const DEMO_PASSWORD = 'password';
 
@@ -16,7 +29,7 @@ async function main() {
   for (const user of demoUsers) {
     await prisma.user.upsert({
       where: { email: user.email },
-      update: { name: user.name, role: user.role, passwordHash },
+      update: { name: user.name, role: user.role, storeId: user.storeId, passwordHash },
       create: { ...user, passwordHash },
     });
   }
