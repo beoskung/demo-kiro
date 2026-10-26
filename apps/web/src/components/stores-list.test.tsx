@@ -83,8 +83,8 @@ describe('StoresList', () => {
 
     // The second call must ask for page 2 through the typed client (query string on /api).
     await vi.waitFor(() => {
-      const requestedPages = fetch.mock.calls.map(
-        ([request]) => new URL((request as Request).url).searchParams.get('page'),
+      const requestedPages = fetch.mock.calls.map(([request]) =>
+        new URL((request as Request).url).searchParams.get('page'),
       );
       expect(requestedPages).toContain('2');
     });

@@ -129,7 +129,11 @@ describe('MasterDataController — stores', () => {
     ]);
     prisma.store.count.mockResolvedValue(2);
 
-    const result = await call(controller.listStores(admin), { page: 1, pageSize: 20 }, { context: {} });
+    const result = await call(
+      controller.listStores(admin),
+      { page: 1, pageSize: 20 },
+      { context: {} },
+    );
 
     expect(result).toMatchObject({ total: 2, page: 1, pageSize: 20 });
     expect(result.items.map((s) => s.id)).toEqual(['s2', 's1']);
@@ -269,7 +273,11 @@ describe('MasterDataController — audit access', () => {
     ]);
     prisma.auditRecord.count.mockResolvedValue(1);
 
-    const result = await call(controller.listAudit(admin), { page: 1, pageSize: 20 }, { context: {} });
+    const result = await call(
+      controller.listAudit(admin),
+      { page: 1, pageSize: 20 },
+      { context: {} },
+    );
 
     expect(result.items).toHaveLength(1);
     expect(prisma.auditRecord.findMany).toHaveBeenCalledWith({

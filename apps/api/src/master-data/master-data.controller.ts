@@ -1,10 +1,5 @@
 import { Controller } from '@nestjs/common';
-import {
-  type AuditOutcome,
-  type PaginationInput,
-  type User,
-  contract,
-} from '@erp/contracts';
+import { type AuditOutcome, type PaginationInput, type User, contract } from '@erp/contracts';
 import { Implement, implement } from '@orpc/nest';
 import { CurrentUser, Roles } from '../auth/auth.decorators.js';
 import { ensurePermission } from '../auth/permission.js';

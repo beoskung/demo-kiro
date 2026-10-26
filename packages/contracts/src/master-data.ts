@@ -113,35 +113,70 @@ export type AuditList = z.infer<typeof AuditListSchema>;
 export const masterDataContract = {
   stores: {
     list: oc
-      .route({ method: 'GET', path: '/master-data/stores', summary: 'List stores (newest-first)', tags: ['Master data'] })
+      .route({
+        method: 'GET',
+        path: '/master-data/stores',
+        summary: 'List stores (newest-first)',
+        tags: ['Master data'],
+      })
       .input(PaginationInputSchema)
       .output(StoreListSchema),
     create: oc
-      .route({ method: 'POST', path: '/master-data/stores', summary: 'Create a store', tags: ['Master data'] })
+      .route({
+        method: 'POST',
+        path: '/master-data/stores',
+        summary: 'Create a store',
+        tags: ['Master data'],
+      })
       .input(StoreCreateInputSchema)
       .output(StoreSchema),
     update: oc
-      .route({ method: 'PUT', path: '/master-data/stores/{id}', summary: 'Edit a store', tags: ['Master data'] })
+      .route({
+        method: 'PUT',
+        path: '/master-data/stores/{id}',
+        summary: 'Edit a store',
+        tags: ['Master data'],
+      })
       .input(StoreUpdateInputSchema)
       .output(StoreSchema),
   },
   suppliers: {
     list: oc
-      .route({ method: 'GET', path: '/master-data/suppliers', summary: 'List suppliers (newest-first)', tags: ['Master data'] })
+      .route({
+        method: 'GET',
+        path: '/master-data/suppliers',
+        summary: 'List suppliers (newest-first)',
+        tags: ['Master data'],
+      })
       .input(PaginationInputSchema)
       .output(SupplierListSchema),
     create: oc
-      .route({ method: 'POST', path: '/master-data/suppliers', summary: 'Create a supplier', tags: ['Master data'] })
+      .route({
+        method: 'POST',
+        path: '/master-data/suppliers',
+        summary: 'Create a supplier',
+        tags: ['Master data'],
+      })
       .input(SupplierCreateInputSchema)
       .output(SupplierSchema),
     update: oc
-      .route({ method: 'PUT', path: '/master-data/suppliers/{id}', summary: 'Edit a supplier', tags: ['Master data'] })
+      .route({
+        method: 'PUT',
+        path: '/master-data/suppliers/{id}',
+        summary: 'Edit a supplier',
+        tags: ['Master data'],
+      })
       .input(SupplierUpdateInputSchema)
       .output(SupplierSchema),
   },
   audit: {
     list: oc
-      .route({ method: 'GET', path: '/master-data/audit', summary: 'List audit records (permission-restricted)', tags: ['Master data'] })
+      .route({
+        method: 'GET',
+        path: '/master-data/audit',
+        summary: 'List audit records (permission-restricted)',
+        tags: ['Master data'],
+      })
       .input(PaginationInputSchema)
       .output(AuditListSchema),
   },

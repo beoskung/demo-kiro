@@ -96,7 +96,11 @@ describe('StoreUpdateInputSchema', () => {
 describe('SupplierCreateInputSchema', () => {
   it('accepts a code, name, and contact', () => {
     expect(
-      SupplierCreateInputSchema.parse({ code: 'SUP01', name: 'Supplier 01', contact: '02-123-4567' }),
+      SupplierCreateInputSchema.parse({
+        code: 'SUP01',
+        name: 'Supplier 01',
+        contact: '02-123-4567',
+      }),
     ).toEqual({ code: 'SUP01', name: 'Supplier 01', contact: '02-123-4567' });
   });
 
@@ -106,9 +110,9 @@ describe('SupplierCreateInputSchema', () => {
   });
 
   it('rejects a blank code', () => {
-    expect(
-      SupplierCreateInputSchema.safeParse({ code: '', name: 'Supplier 01' }).success,
-    ).toBe(false);
+    expect(SupplierCreateInputSchema.safeParse({ code: '', name: 'Supplier 01' }).success).toBe(
+      false,
+    );
   });
 
   it('rejects a blank name', () => {
