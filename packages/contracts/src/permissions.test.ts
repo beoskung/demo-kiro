@@ -18,6 +18,14 @@ describe('ROLE_PERMISSIONS matrix', () => {
     expect(roleHasPermission('ADMINISTRATOR', 'purchase-order:approve')).toBe(false);
   });
 
+  it('lets an administrator and a purchasing officer read master data, but not a store employee', () => {
+    expect(roleHasPermission('ADMINISTRATOR', 'master-data:read')).toBe(true);
+    expect(roleHasPermission('PURCHASING_OFFICER', 'master-data:read')).toBe(true);
+    // read does not imply manage: a purchasing officer still cannot create/edit master data
+    expect(roleHasPermission('PURCHASING_OFFICER', 'master-data:manage')).toBe(false);
+    expect(roleHasPermission('STORE_EMPLOYEE', 'master-data:read')).toBe(false);
+  });
+
   it('lets a manager approve purchase orders', () => {
     expect(roleHasPermission('MANAGER', 'purchase-order:approve')).toBe(true);
   });
@@ -36,6 +44,7 @@ describe('ROLE_PERMISSIONS matrix', () => {
   it('asserts at least one allowed and one denied permission per role', () => {
     const everyPermission: Permission[] = [
       'master-data:manage',
+      'master-data:read',
       'purchase-order:submit',
       'purchase-order:approve',
       'goods-receipt:receive',

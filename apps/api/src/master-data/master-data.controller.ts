@@ -123,10 +123,11 @@ export class MasterDataController {
     });
   }
 
+  @Roles('ADMINISTRATOR', 'PURCHASING_OFFICER')
   @Implement(contract.masterData.stores.list)
   listStores(@CurrentUser() user: User) {
     return implement(contract.masterData.stores.list).handler(async ({ input }) => {
-      ensurePermission(user, 'master-data:manage');
+      ensurePermission(user, 'master-data:read');
       const [rows, total] = await Promise.all([
         this.prisma.store.findMany({ orderBy: { createdAt: 'desc' }, ...paginate(input) }),
         this.prisma.store.count(),
@@ -175,10 +176,11 @@ export class MasterDataController {
     });
   }
 
+  @Roles('ADMINISTRATOR', 'PURCHASING_OFFICER')
   @Implement(contract.masterData.suppliers.list)
   listSuppliers(@CurrentUser() user: User) {
     return implement(contract.masterData.suppliers.list).handler(async ({ input }) => {
-      ensurePermission(user, 'master-data:manage');
+      ensurePermission(user, 'master-data:read');
       const [rows, total] = await Promise.all([
         this.prisma.supplier.findMany({ orderBy: { createdAt: 'desc' }, ...paginate(input) }),
         this.prisma.supplier.count(),
