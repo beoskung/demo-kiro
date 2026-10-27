@@ -47,7 +47,8 @@ export function PurchaseOrderForm() {
       },
       onError: (error) => {
         setErrorMessage(
-          error.message || 'เกิดข้อผิดพลาดในการสร้างใบสั่งซื้อ กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
+          error.message ||
+            'เกิดข้อผิดพลาดในการสร้างใบสั่งซื้อ กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง',
         );
         setSuccessMessage('');
       },

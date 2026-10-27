@@ -56,9 +56,7 @@ describe('PurchaseOrderForm', () => {
         pageSize: 100,
       },
       'GET /master-data/stores': {
-        items: [
-          { id: 'store-b01', code: 'B01', name: 'Central Store', createdAt: '2024-01-01' },
-        ],
+        items: [{ id: 'store-b01', code: 'B01', name: 'Central Store', createdAt: '2024-01-01' }],
         total: 1,
         page: 1,
         pageSize: 100,
@@ -137,9 +135,7 @@ describe('PurchaseOrderForm', () => {
         pageSize: 100,
       },
       'GET /master-data/stores': {
-        items: [
-          { id: 'store-b01', code: 'B01', name: 'Central Store', createdAt: '2024-01-01' },
-        ],
+        items: [{ id: 'store-b01', code: 'B01', name: 'Central Store', createdAt: '2024-01-01' }],
         total: 1,
         page: 1,
         pageSize: 100,

@@ -217,7 +217,7 @@ describe('PurchaseOrdersController — update', () => {
 
     expect(result.destinationStoreId).toBe('store-b02');
     expect(result.lines).toHaveLength(1);
-    expect(result.lines[0].orderedQuantity).toBe(30);
+    expect(result.lines[0]?.orderedQuantity).toBe(30);
     expect(prisma.purchaseOrderLine.deleteMany).toHaveBeenCalledWith({
       where: { purchaseOrderId: 'po1' },
     });

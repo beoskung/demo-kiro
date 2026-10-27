@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { contract, User } from '@erp/contracts';
+import { contract, type User } from '@erp/contracts';
 import { Implement, implement } from '@orpc/nest';
 import { ORPCError } from '@orpc/server';
 import { PrismaService } from '../database/prisma.service.js';
@@ -59,22 +59,17 @@ export class PurchaseOrdersController {
         });
 
         if (!existing) {
-          throw new ORPCError({
-            code: 'NOT_FOUND',
-            message: 'Purchase order not found',
-          });
+          throw new ORPCError('NOT_FOUND', { message: 'Purchase order not found' });
         }
 
         if (existing.status !== 'DRAFT') {
-          throw new ORPCError({
-            code: 'BAD_REQUEST',
+          throw new ORPCError('BAD_REQUEST', {
             message: 'Only draft purchase orders can be edited',
           });
         }
 
         if (existing.createdById !== user.id) {
-          throw new ORPCError({
-            code: 'FORBIDDEN',
+          throw new ORPCError('FORBIDDEN', {
             message: 'You can only edit your own purchase orders',
           });
         }
@@ -120,10 +115,7 @@ export class PurchaseOrdersController {
       });
 
       if (!purchaseOrder) {
-        throw new ORPCError({
-          code: 'NOT_FOUND',
-          message: 'Purchase order not found',
-        });
+        throw new ORPCError('NOT_FOUND', { message: 'Purchase order not found' });
       }
 
       return {
