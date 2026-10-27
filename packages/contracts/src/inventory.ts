@@ -79,7 +79,10 @@ export const StockAdjustmentInputSchema = z.object({
   /** The store where stock is adjusted. */
   storeId: z.string().min(1),
   /** Signed quantity change: positive to increase, negative to decrease. Cannot be zero. */
-  delta: z.number().int().refine((val) => val !== 0, { message: 'Delta cannot be zero' }),
+  delta: z
+    .number()
+    .int()
+    .refine((val) => val !== 0, { message: 'Delta cannot be zero' }),
   /** Mandatory reason for the adjustment, recorded in the ledger. */
   reason: z.string().min(1, 'Reason is required'),
 });

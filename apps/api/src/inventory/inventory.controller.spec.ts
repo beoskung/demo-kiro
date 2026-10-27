@@ -13,7 +13,7 @@ type PrismaStub = {
   store: {
     findMany: ReturnType<typeof vi.fn>;
   };
-  $transaction?: ReturnType<typeof vi.fn>;
+  $transaction?: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 };
 
 const storeEmployee = makeUser('STORE_EMPLOYEE', { id: 'emp-1' });
@@ -252,7 +252,7 @@ describe('InventoryController — stock adjustment', () => {
       },
       auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
     };
-    (prisma as any).$transaction = vi.fn((callback) => callback(mockTransaction));
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
 
     const result = await call(
       controller.adjust(manager),
@@ -309,7 +309,7 @@ describe('InventoryController — stock adjustment', () => {
       },
       auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
     };
-    (prisma as any).$transaction = vi.fn((callback) => callback(mockTransaction));
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
 
     const result = await call(
       controller.adjust(manager),
@@ -335,7 +335,7 @@ describe('InventoryController — stock adjustment', () => {
       },
       auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
     };
-    (prisma as any).$transaction = vi.fn((callback) => callback(mockTransaction));
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
 
     const promise = call(
       controller.adjust(manager),
@@ -368,7 +368,7 @@ describe('InventoryController — stock adjustment', () => {
       },
       auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
     };
-    (prisma as any).$transaction = vi.fn((callback) => callback(mockTransaction));
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
 
     const result = await call(
       controller.adjust(manager),

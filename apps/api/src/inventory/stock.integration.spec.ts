@@ -232,14 +232,18 @@ describe.skipIf(!DATABASE_URL)('Inventory — Postgres integration harness', () 
     // The atomic increment guarantees no two concurrent callers get the same number.
     expect(new Set(results).size).toBe(20);
   });
-});
 
   it('adjust() increases stock with a mandatory reason and audits with actor and timestamp', async () => {
     const controller = new InventoryController(prisma as unknown as PrismaService);
 
     const result = await call(
       controller.adjust(manager),
-      { productId: 'product-sku002', storeId: 'store-b01', delta: 8, reason: 'Physical count correction' },
+      {
+        productId: 'product-sku002',
+        storeId: 'store-b01',
+        delta: 8,
+        reason: 'Physical count correction',
+      },
       { context: {} },
     );
 
@@ -289,7 +293,12 @@ describe.skipIf(!DATABASE_URL)('Inventory — Postgres integration harness', () 
 
     const result = await call(
       controller.adjust(manager),
-      { productId: 'product-sku001', storeId: 'store-b01', delta: -3, reason: 'Damaged goods writeoff' },
+      {
+        productId: 'product-sku001',
+        storeId: 'store-b01',
+        delta: -3,
+        reason: 'Damaged goods writeoff',
+      },
       { context: {} },
     );
 
@@ -316,7 +325,12 @@ describe.skipIf(!DATABASE_URL)('Inventory — Postgres integration harness', () 
     // SKU002@B01 has balance 5; attempting -6 must be rejected
     const promise = call(
       controller.adjust(manager),
-      { productId: 'product-sku002', storeId: 'store-b01', delta: -6, reason: 'Attempted over-adjustment' },
+      {
+        productId: 'product-sku002',
+        storeId: 'store-b01',
+        delta: -6,
+        reason: 'Attempted over-adjustment',
+      },
       { context: {} },
     );
 
@@ -358,7 +372,12 @@ describe.skipIf(!DATABASE_URL)('Inventory — Postgres integration harness', () 
 
     const result = await call(
       controller.adjust(manager),
-      { productId: 'product-sku001', storeId: 'store-b02', delta: 20, reason: 'Initial stock at new branch' },
+      {
+        productId: 'product-sku001',
+        storeId: 'store-b02',
+        delta: 20,
+        reason: 'Initial stock at new branch',
+      },
       { context: {} },
     );
 

@@ -1,12 +1,6 @@
 import { Controller } from '@nestjs/common';
-import {
-  type AuditOutcome,
-  type StockSearchInput,
-  type User,
-  contract,
-} from '@erp/contracts';
+import { type AuditOutcome, type StockSearchInput, type User, contract } from '@erp/contracts';
 import { Implement, implement } from '@orpc/nest';
-import { ORPCError } from '@orpc/server';
 import { CurrentUser } from '../auth/auth.decorators.js';
 import { apiError } from '../auth/api-error.js';
 import { ensurePermission } from '../auth/permission.js';
@@ -130,7 +124,7 @@ export class InventoryController {
    * the balance and movement, so the audit is atomic with the change.
    */
   private async recordAudit(
-    prisma: PrismaService,
+    prisma: Pick<PrismaService, 'auditRecord'>,
     actorId: string,
     entityId: string,
     outcome: AuditOutcome,
