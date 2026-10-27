@@ -9,6 +9,7 @@ import { InventoryModule } from './inventory/inventory.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
 import { OpenApiModule } from './openapi/openapi.module.js';
 import { ProductsModule } from './products/products.module.js';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ProductsModule } from './products/products.module.js';
     InventoryModule,
     MasterDataModule,
     ProductsModule,
+    PurchaseOrdersModule,
     OpenApiModule,
   ],
 })
