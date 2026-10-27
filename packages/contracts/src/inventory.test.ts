@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   MovementTypeSchema,
+  StockAdjustmentInputSchema,
+  StockAdjustmentResultSchema,
   StockRowSchema,
   StockSearchInputSchema,
   StockSearchResultSchema,
@@ -117,5 +119,59 @@ describe('MovementTypeSchema', () => {
 
   it('rejects an unknown movement kind', () => {
     expect(MovementTypeSchema.safeParse('TRANSFER').success).toBe(false);
+  });
+});
+
+describe('StockAdjustmentInputSchema', () => {
+  const base = {
+    productId: 'p1',
+    storeId: 's1',
+    delta: 5,
+    reason: 'Physical count revealed missing items',
+  };
+
+  it('accepts a positive adjustment with a reason', () => {
+    expect(StockAdjustmentInputSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('accepts a negative adjustment with a reason', () => {
+    const result = StockAdjustmentInputSchema.safeParse({ ...base, delta: -3 });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a zero delta', () => {
+    expect(StockAdjustmentInputSchema.safeParse({ ...base, delta: 0 }).success).toBe(false);
+  });
+
+  it('rejects an adjustment without a reason', () => {
+    expect(StockAdjustmentInputSchema.safeParse({ ...base, reason: '' }).success).toBe(false);
+  });
+
+  it('rejects a non-integer delta', () => {
+    expect(StockAdjustmentInputSchema.safeParse({ ...base, delta: 2.5 }).success).toBe(false);
+  });
+});
+
+describe('StockAdjustmentResultSchema', () => {
+  it('accepts a result with balance before and after', () => {
+    const result = StockAdjustmentResultSchema.safeParse({
+      balanceBefore: 10,
+      balanceAfter: 15,
+      delta: 5,
+      documentNumber: 'ADJ-00001',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects a negative balance', () => {
+    const result = StockAdjustmentResultSchema.safeParse({
+      balanceBefore: -1,
+      balanceAfter: 5,
+      delta: 6,
+      documentNumber: 'ADJ-00001',
+    });
+
+    expect(result.success).toBe(false);
   });
 });

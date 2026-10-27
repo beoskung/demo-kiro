@@ -66,6 +66,41 @@ export type StockRow = z.infer<typeof StockRowSchema>;
 export const StockSearchResultSchema = paginatedListSchema(StockRowSchema);
 export type StockSearchResult = z.infer<typeof StockSearchResultSchema>;
 
+// --- Stock adjustment -------------------------------------------------------
+
+/**
+ * Adjustment input: a manager corrects the stock at a store with a mandatory reason. The delta is
+ * signed (positive to increase, negative to decrease). A decrease larger than the available balance
+ * is rejected at the API so stock never goes negative (INV-05).
+ */
+export const StockAdjustmentInputSchema = z.object({
+  /** The product to adjust. */
+  productId: z.string().min(1),
+  /** The store where stock is adjusted. */
+  storeId: z.string().min(1),
+  /** Signed quantity change: positive to increase, negative to decrease. Cannot be zero. */
+  delta: z.number().int().refine((val) => val !== 0, { message: 'Delta cannot be zero' }),
+  /** Mandatory reason for the adjustment, recorded in the ledger. */
+  reason: z.string().min(1, 'Reason is required'),
+});
+export type StockAdjustmentInput = z.infer<typeof StockAdjustmentInputSchema>;
+
+/**
+ * Adjustment result: the balance before and after, the signed delta, and the document number
+ * recorded in the ledger. This is the audit trail the demo looks for.
+ */
+export const StockAdjustmentResultSchema = z.object({
+  /** The running balance immediately before the adjustment. */
+  balanceBefore: NonNegativeInt,
+  /** The running balance immediately after the adjustment (= balanceBefore + delta). */
+  balanceAfter: NonNegativeInt,
+  /** The signed change that was applied. */
+  delta: z.number().int(),
+  /** The unique document number recorded as the source of this movement. */
+  documentNumber: z.string(),
+});
+export type StockAdjustmentResult = z.infer<typeof StockAdjustmentResultSchema>;
+
 // --- Routes -----------------------------------------------------------------
 
 export const inventoryContract = {
@@ -78,4 +113,14 @@ export const inventoryContract = {
     })
     .input(StockSearchInputSchema)
     .output(StockSearchResultSchema),
+
+  adjust: oc
+    .route({
+      method: 'POST',
+      path: '/inventory/adjust',
+      summary: 'Adjust stock with mandatory reason (manager-only, full audit)',
+      tags: ['Inventory'],
+    })
+    .input(StockAdjustmentInputSchema)
+    .output(StockAdjustmentResultSchema),
 };
