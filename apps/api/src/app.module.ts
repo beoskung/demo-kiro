@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { validateEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
+import { MasterDataModule } from './master-data/master-data.module.js';
 import { OpenApiModule } from './openapi/openapi.module.js';
 
 @Module({
@@ -19,6 +20,7 @@ import { OpenApiModule } from './openapi/openapi.module.js';
     DatabaseModule,
     AuthModule,
     HealthModule,
+    MasterDataModule,
     OpenApiModule,
   ],
 })

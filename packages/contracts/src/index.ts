@@ -1,9 +1,11 @@
 import { authContract } from './auth.js';
 import { healthContract } from './health.js';
+import { masterDataContract } from './master-data.js';
 
 export * from './auth.js';
 export * from './errors.js';
 export * from './health.js';
+export * from './master-data.js';
 export * from './permissions.js';
 
 /**
@@ -16,6 +18,7 @@ export * from './permissions.js';
 export const contract = {
   auth: authContract,
   health: healthContract,
+  masterData: masterDataContract,
 };
 
 export type Contract = typeof contract;
