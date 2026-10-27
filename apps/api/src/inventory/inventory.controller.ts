@@ -1,9 +1,11 @@
 import { Controller } from '@nestjs/common';
-import { type StockSearchInput, type User, contract } from '@erp/contracts';
+import { type AuditOutcome, type StockSearchInput, type User, contract } from '@erp/contracts';
 import { Implement, implement } from '@orpc/nest';
 import { CurrentUser } from '../auth/auth.decorators.js';
+import { apiError } from '../auth/api-error.js';
 import { ensurePermission } from '../auth/permission.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { nextDocumentNumber } from './document-number.service.js';
 
 /** A StockLevel row joined with the parts of its product the stock view needs. */
 type StockLevelRow = {
@@ -114,6 +116,90 @@ export class InventoryController {
         page: input.page,
         pageSize: input.pageSize,
       };
+    });
+  }
+
+  /**
+   * Record an audit trail entry for a stock adjustment. Called inside the transaction that writes
+   * the balance and movement, so the audit is atomic with the change.
+   */
+  private async recordAudit(
+    prisma: Pick<PrismaService, 'auditRecord'>,
+    actorId: string,
+    entityId: string,
+    outcome: AuditOutcome,
+  ) {
+    await prisma.auditRecord.create({
+      data: { actorId, action: 'stock.adjust', entity: 'stock', entityId, outcome },
+    });
+  }
+
+  @Implement(contract.inventory.adjust)
+  adjust(@CurrentUser() user: User) {
+    return implement(contract.inventory.adjust).handler(async ({ input }) => {
+      ensurePermission(user, 'stock:adjust');
+
+      return await this.prisma.$transaction(async (tx) => {
+        try {
+          // Generate unique document number for this adjustment
+          const documentNumber = await nextDocumentNumber(tx, 'ADJ');
+
+          // Lock and read the current stock level
+          const stockLevel = await tx.stockLevel.findUnique({
+            where: {
+              productId_storeId: { productId: input.productId, storeId: input.storeId },
+            },
+          });
+
+          const balanceBefore = stockLevel?.quantity ?? 0;
+          const balanceAfter = balanceBefore + input.delta;
+
+          // Reject decreases that would drive stock negative
+          if (balanceAfter < 0) {
+            throw apiError('BAD_REQUEST', 'สต็อกไม่เพียงพอสำหรับการปรับลด');
+          }
+
+          // Update or create the stock level
+          if (stockLevel) {
+            await tx.stockLevel.update({
+              where: { id: stockLevel.id },
+              data: { quantity: balanceAfter },
+            });
+          } else {
+            await tx.stockLevel.create({
+              data: {
+                productId: input.productId,
+                storeId: input.storeId,
+                quantity: balanceAfter,
+                reorderThreshold: 0,
+              },
+            });
+          }
+
+          // Append the movement to the immutable ledger
+          await tx.stockMovement.create({
+            data: {
+              productId: input.productId,
+              storeId: input.storeId,
+              delta: input.delta,
+              balanceBefore,
+              balanceAfter,
+              type: 'ADJUSTMENT',
+              sourceDocument: documentNumber,
+              actorId: user.id,
+            },
+          });
+
+          // Audit the success
+          await this.recordAudit(tx, user.id, `${input.productId}:${input.storeId}`, 'success');
+
+          return { balanceBefore, balanceAfter, delta: input.delta, documentNumber };
+        } catch (error) {
+          // Audit the failure within the transaction (then rethrow so tx rolls back)
+          await this.recordAudit(tx, user.id, '', 'failure');
+          throw error;
+        }
+      });
     });
   }
 }

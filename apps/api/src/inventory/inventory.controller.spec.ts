@@ -13,6 +13,7 @@ type PrismaStub = {
   store: {
     findMany: ReturnType<typeof vi.fn>;
   };
+  $transaction?: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T>;
 };
 
 const storeEmployee = makeUser('STORE_EMPLOYEE', { id: 'emp-1' });
@@ -229,5 +230,171 @@ describe('InventoryController — stock search', () => {
 
     expect(result.items).toEqual([]);
     expect(prisma.stockLevel.findMany).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InventoryController — stock adjustment', () => {
+  it('increases stock with a mandatory reason and records balance before and after', async () => {
+    const controller = await createController();
+    const documentNumber = 'ADJ-00001';
+    const mockTransaction = {
+      stockLevel: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl1', productId: 'p1', storeId: 's1', quantity: 10 }),
+        update: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl1', productId: 'p1', storeId: 's1', quantity: 15 }),
+      },
+      stockMovement: { create: vi.fn().mockResolvedValue({ id: 'mov1' }) },
+      documentSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: 'ADJ', value: 1 }),
+      },
+      auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
+    };
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'p1', storeId: 's1', delta: 5, reason: 'Physical count correction' },
+      { context: {} },
+    );
+
+    expect(result).toEqual({
+      balanceBefore: 10,
+      balanceAfter: 15,
+      delta: 5,
+      documentNumber,
+    });
+    expect(mockTransaction.stockLevel.update).toHaveBeenCalledWith({
+      where: { id: 'sl1' },
+      data: { quantity: 15 },
+    });
+    expect(mockTransaction.stockMovement.create).toHaveBeenCalledWith({
+      data: {
+        productId: 'p1',
+        storeId: 's1',
+        delta: 5,
+        balanceBefore: 10,
+        balanceAfter: 15,
+        type: 'ADJUSTMENT',
+        sourceDocument: documentNumber,
+        actorId: 'mgr-1',
+      },
+    });
+    expect(mockTransaction.auditRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: 'mgr-1',
+        action: 'stock.adjust',
+        entity: 'stock',
+        outcome: 'success',
+      }),
+    });
+  });
+
+  it('decreases stock with a reason', async () => {
+    const controller = await createController();
+    const mockTransaction = {
+      stockLevel: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl1', productId: 'p1', storeId: 's1', quantity: 20 }),
+        update: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl1', productId: 'p1', storeId: 's1', quantity: 15 }),
+      },
+      stockMovement: { create: vi.fn().mockResolvedValue({ id: 'mov1' }) },
+      documentSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: 'ADJ', value: 2 }),
+      },
+      auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
+    };
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'p1', storeId: 's1', delta: -5, reason: 'Damaged goods writeoff' },
+      { context: {} },
+    );
+
+    expect(result.balanceBefore).toBe(20);
+    expect(result.balanceAfter).toBe(15);
+    expect(result.delta).toBe(-5);
+  });
+
+  it('rejects a decrease larger than the available balance', async () => {
+    const controller = await createController();
+    const mockTransaction = {
+      stockLevel: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl1', productId: 'p1', storeId: 's1', quantity: 10 }),
+      },
+      documentSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: 'ADJ', value: 4 }),
+      },
+      auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
+    };
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
+
+    const promise = call(
+      controller.adjust(manager),
+      { productId: 'p1', storeId: 's1', delta: -15, reason: 'Stock reduction' },
+      { context: {} },
+    );
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('ไม่เพียงพอ'), // "insufficient" in Thai
+    });
+    // Audit the failure
+    expect(mockTransaction.auditRecord.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ outcome: 'failure' }),
+    });
+  });
+
+  it('creates the stock level row if it does not exist (increase only)', async () => {
+    const controller = await createController();
+    const mockTransaction = {
+      stockLevel: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi
+          .fn()
+          .mockResolvedValue({ id: 'sl-new', productId: 'p1', storeId: 's1', quantity: 10 }),
+      },
+      stockMovement: { create: vi.fn().mockResolvedValue({ id: 'mov1' }) },
+      documentSequence: {
+        upsert: vi.fn().mockResolvedValue({ prefix: 'ADJ', value: 3 }),
+      },
+      auditRecord: { create: vi.fn().mockResolvedValue({ id: 'audit1' }) },
+    };
+    (prisma as unknown as PrismaStub & { $transaction: <T>(callback: (tx: unknown) => Promise<T>) => Promise<T> }).$transaction = vi.fn((callback) => callback(mockTransaction));
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'p1', storeId: 's1', delta: 10, reason: 'Initial stock' },
+      { context: {} },
+    );
+
+    expect(result.balanceBefore).toBe(0);
+    expect(result.balanceAfter).toBe(10);
+    expect(mockTransaction.stockLevel.create).toHaveBeenCalledWith({
+      data: { productId: 'p1', storeId: 's1', quantity: 10, reorderThreshold: 0 },
+    });
+  });
+
+  it('rejects a non-manager attempting adjustment', async () => {
+    const controller = await createController();
+
+    const promise = call(
+      controller.adjust(storeEmployee),
+      { productId: 'p1', storeId: 's1', delta: 5, reason: 'Not allowed' },
+      { context: {} },
+    );
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+      message: 'คุณไม่มีสิทธิ์ดำเนินการนี้',
+    });
   });
 });
