@@ -93,20 +93,26 @@ model Product {
   active       Boolean      @default(true)
   /// True once any transaction (purchase order, receipt, sale) references this product. While
   /// true the SKU may not change. Set by later transaction tickets; defaults false at creation.
-  referenced   Boolean      @default(false)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  referenced   Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   stockLevels  StockLevel[]
+  movements    StockMovement[]
 }
 
 /// Per-store stock for a product: the on-hand quantity and the reorder threshold at which the
 /// store should restock. Both are whole, non-negative (validated at the contract). One row per
 /// (product, store); the pair is unique so a product has at most one threshold per store.
+///
+/// `quantity` is the stored running balance (INV-03): it equals the opening balance plus every
+/// successful movement, and the ledger (`StockMovement`) records each change. The balance may
+/// reach 0 but is never driven negative. A matching `StockMovement` row is always written in the
+/// same transaction as a balance change so the two can never disagree.
 model StockLevel {
   id               String   @id @default(cuid())
   productId        String
   storeId          String
-  /// On-hand quantity. Whole, non-negative.
+  /// On-hand running balance. Whole, non-negative.
   quantity         Int      @default(0)
   /// Reorder threshold for this product at this store. Whole, non-negative.
   reorderThreshold Int      @default(0)
@@ -116,4 +122,55 @@ model StockLevel {
 
   @@unique([productId, storeId])
   @@index([storeId])
+}
+
+/// What kind of change a movement records. A RECEIPT increases stock (goods received against a
+/// purchase order), a SALE decreases it (store sale), and an ADJUSTMENT is a manual manager
+/// correction in either direction. The set grows only if the spec adds movement kinds.
+enum MovementType {
+  RECEIPT
+  SALE
+  ADJUSTMENT
+}
+
+/// The immutable stock-movement ledger (INV-02). Every stock increase or decrease appends exactly
+/// one row capturing the product, store, signed quantity delta, the balance before and after, the
+/// movement type, the source document that caused it, the actor, and the timestamp. Rows are
+/// append-only: there is no edit or delete route, so any balance is fully traceable and
+/// tamper-evident (NFR-03). `balanceAfter` always equals `balanceBefore + delta` and is never
+/// negative, enforced by the handler that writes the balance and this row in one transaction.
+model StockMovement {
+  id            String       @id @default(cuid())
+  productId     String
+  storeId       String
+  /// Signed change applied to the balance: positive for an increase, negative for a decrease.
+  delta         Int
+  /// The running balance immediately before this movement.
+  balanceBefore Int
+  /// The running balance immediately after this movement (= balanceBefore + delta, never < 0).
+  balanceAfter  Int
+  type          MovementType
+  /// The document that caused the movement (e.g. a goods-receipt or sale number). Free-form so
+  /// later tickets can reference their own document numbers without a schema change.
+  sourceDocument String
+  /// The user who performed the action (User.id). Kept as an identifier for the audit trail.
+  actorId       String
+  createdAt     DateTime     @default(now())
+  product       Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, storeId, createdAt])
+  @@index([storeId, createdAt])
+  @@index([type, createdAt])
+}
+
+/// A monotonically increasing counter per document prefix, used to mint unique document numbers
+/// (§4.3). Receipts and sales each take a prefix (e.g. `GR`, `SA`) and call the generator, which
+/// atomically increments the counter inside a transaction and formats `<PREFIX>-<zero-padded>`.
+/// The unique `prefix` plus the atomic increment guarantees no two callers ever get the same
+/// number, even under concurrency.
+model DocumentSequence {
+  prefix    String   @id
+  /// The last number handed out for this prefix. The next call returns `value + 1`.
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
 }
