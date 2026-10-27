@@ -3,6 +3,7 @@ import { healthContract } from './health.js';
 import { inventoryContract } from './inventory.js';
 import { masterDataContract } from './master-data.js';
 import { productsContract } from './products.js';
+import { purchaseOrdersContract } from './purchase-orders.js';
 
 export * from './auth.js';
 export * from './errors.js';
@@ -11,6 +12,7 @@ export * from './inventory.js';
 export * from './master-data.js';
 export * from './permissions.js';
 export * from './products.js';
+export * from './purchase-orders.js';
 
 /**
  * The single source of truth for the HTTP API.
@@ -25,6 +27,7 @@ export const contract = {
   inventory: inventoryContract,
   masterData: masterDataContract,
   products: productsContract,
+  purchaseOrders: purchaseOrdersContract,
 };
 
 export type Contract = typeof contract;

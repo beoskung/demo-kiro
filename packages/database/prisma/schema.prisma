@@ -174,3 +174,43 @@ model DocumentSequence {
   value     Int      @default(0)
   updatedAt DateTime @updatedAt
 }
+
+enum PurchaseOrderStatus {
+  DRAFT
+  SUBMITTED
+  RECEIVED
+  CANCELLED
+}
+
+/// A purchase order: the document a purchasing officer prepares to order stock from a supplier.
+/// PO-01 (this ticket) lands draft creation and editing. Later tickets add submission, goods
+/// receipt, and cancellation. `documentNumber` is unique and generated on creation (PO-00001, etc).
+/// A draft names one supplier, one destination store, an expected receipt date, and at least one
+/// line with positive whole `orderedQuantity` and non-negative `unitPrice` (satang). The same SKU
+/// may not appear twice in one order (enforced at the contract and API).
+model PurchaseOrder {
+  id                   String              @id @default(cuid())
+  documentNumber       String              @unique
+  supplierId           String
+  destinationStoreId   String
+  expectedReceiptDate  DateTime
+  status               PurchaseOrderStatus @default(DRAFT)
+  createdById          String
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  lines                PurchaseOrderLine[]
+}
+
+/// One line of a purchase order: the product, ordered quantity (whole, positive), and unit price
+/// (satang, non-negative). A line is deleted when the draft is edited; there is no PATCH route.
+model PurchaseOrderLine {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  productId       String
+  orderedQuantity Int
+  /// Purchase unit price in satang (1 THB = 100). Whole, non-negative.
+  unitPrice       Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@index([purchaseOrderId])
+}
