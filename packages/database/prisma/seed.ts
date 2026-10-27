@@ -1,4 +1,4 @@
-import { createPrismaClient, hashPassword, Role } from '../src/index.js';
+import { createPrismaClient, hashPassword, Role, seedScenarioData } from '../src/index.js';
 
 const prisma = createPrismaClient(
   process.env.DATABASE_URL ?? 'postgresql://erp:erp@localhost:5432/erp',
@@ -18,7 +18,7 @@ const demoUsers = [
     email: 'store@erp.local',
     name: 'Store Employee',
     role: Role.STORE_EMPLOYEE,
-    storeId: 'store-01',
+    storeId: 'store-b01',
   },
   { email: 'manager@erp.local', name: 'Manager User', role: Role.MANAGER, storeId: null },
 ];
@@ -34,6 +34,11 @@ async function main() {
     });
   }
   console.log(`Seeded ${demoUsers.length} demo users (password: "${DEMO_PASSWORD}").`);
+
+  // §8.1 starting data: stores B01/B02, supplier SUP01, products SKU001–SKU003 with B01 opening
+  // balances (B02 zero) and a reorder threshold of 3 at both stores.
+  await seedScenarioData(prisma);
+  console.log('Seeded §8.1 starting data (2 stores, 1 supplier, 3 products with stock levels).');
 }
 
 try {
