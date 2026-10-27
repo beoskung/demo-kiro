@@ -7,6 +7,7 @@ import type { Role } from './auth.js';
  */
 export type Permission =
   | 'master-data:manage'
+  | 'master-data:read'
   | 'purchase-order:submit'
   | 'purchase-order:approve'
   | 'goods-receipt:receive'
@@ -24,8 +25,8 @@ export type Permission =
  * - A STORE_EMPLOYEE receives goods and records sales for its own store only (see isStoreScoped).
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
-  ADMINISTRATOR: ['master-data:manage', 'report:view'],
-  PURCHASING_OFFICER: ['purchase-order:submit', 'report:view'],
+  ADMINISTRATOR: ['master-data:manage', 'master-data:read', 'report:view'],
+  PURCHASING_OFFICER: ['purchase-order:submit', 'master-data:read', 'report:view'],
   STORE_EMPLOYEE: ['goods-receipt:receive', 'sale:record', 'report:view'],
   MANAGER: ['purchase-order:approve', 'stock:adjust', 'report:view'],
 };

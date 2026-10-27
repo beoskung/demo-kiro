@@ -12,8 +12,8 @@ import * as z from 'zod';
 
 /** Shared list pagination input: 1-based page, bounded page size, whole numbers only. */
 export const PaginationInputSchema = z.object({
-  page: z.number().int().positive().default(1),
-  pageSize: z.number().int().positive().max(100).default(20),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
 });
 export type PaginationInput = z.infer<typeof PaginationInputSchema>;
 
