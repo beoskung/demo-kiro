@@ -75,3 +75,45 @@ model AuditRecord {
 
   @@index([entity, createdAt])
 }
+
+/// A product in the catalogue that purchasing, receiving, sales, and reporting all depend on.
+/// SKU is unique across the organization and immutable once a transaction references the product
+/// (`referenced` is set true by the first document that points at it; later tickets flip it). A
+/// product can be deactivated (`active = false`): it stays searchable in historical lookups but
+/// the API refuses to add an inactive product to a new document. `sellingPrice` is a whole number
+/// of the smallest currency unit (satang); it is never negative (enforced at the contract).
+model Product {
+  id           String       @id @default(cuid())
+  sku          String       @unique
+  name         String
+  category     String
+  unit         String
+  /// Selling price in satang (1 THB = 100). Whole, non-negative; validated at the contract.
+  sellingPrice Int
+  active       Boolean      @default(true)
+  /// True once any transaction (purchase order, receipt, sale) references this product. While
+  /// true the SKU may not change. Set by later transaction tickets; defaults false at creation.
+  referenced   Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  stockLevels  StockLevel[]
+}
+
+/// Per-store stock for a product: the on-hand quantity and the reorder threshold at which the
+/// store should restock. Both are whole, non-negative (validated at the contract). One row per
+/// (product, store); the pair is unique so a product has at most one threshold per store.
+model StockLevel {
+  id               String   @id @default(cuid())
+  productId        String
+  storeId          String
+  /// On-hand quantity. Whole, non-negative.
+  quantity         Int      @default(0)
+  /// Reorder threshold for this product at this store. Whole, non-negative.
+  reorderThreshold Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, storeId])
+  @@index([storeId])
+}

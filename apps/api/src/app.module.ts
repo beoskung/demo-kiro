@@ -7,6 +7,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MasterDataModule } from './master-data/master-data.module.js';
 import { OpenApiModule } from './openapi/openapi.module.js';
+import { ProductsModule } from './products/products.module.js';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { OpenApiModule } from './openapi/openapi.module.js';
     AuthModule,
     HealthModule,
     MasterDataModule,
+    ProductsModule,
     OpenApiModule,
   ],
 })
