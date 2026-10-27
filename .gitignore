@@ -16,6 +16,9 @@ dist/
 .env.*
 !.env.example
 
+# corporate TLS inspection CA (local only, provided per-machine, never commit)
+docker/corp-ca.pem
+
 # logs
 *.log
 npm-debug.log*

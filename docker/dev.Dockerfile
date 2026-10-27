@@ -7,6 +7,14 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
+# Corporate TLS inspection (e.g. Zscaler): trust the proxy's root CA so npm/pnpm
+# can reach the registry over HTTPS. The PEM is provided from the build context.
+# Installs into the system trust store (for apt/openssl) AND is exposed to Node
+# via NODE_EXTRA_CA_CERTS. We never disable certificate verification.
+COPY docker/corp-ca.pem /usr/local/share/ca-certificates/corp-ca.crt
+RUN update-ca-certificates
+ENV NODE_EXTRA_CA_CERTS=/usr/local/share/ca-certificates/corp-ca.crt
+
 # Keep in sync with "packageManager" in the root package.json.
 RUN npm install -g pnpm@12.15.0
 
