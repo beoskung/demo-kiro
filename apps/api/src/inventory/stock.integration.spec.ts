@@ -233,3 +233,149 @@ describe.skipIf(!DATABASE_URL)('Inventory — Postgres integration harness', () 
     expect(new Set(results).size).toBe(20);
   });
 });
+
+  it('adjust() increases stock with a mandatory reason and audits with actor and timestamp', async () => {
+    const controller = new InventoryController(prisma as unknown as PrismaService);
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'product-sku002', storeId: 'store-b01', delta: 8, reason: 'Physical count correction' },
+      { context: {} },
+    );
+
+    expect(result).toMatchObject({
+      balanceBefore: 5,
+      balanceAfter: 13,
+      delta: 8,
+    });
+    expect(result.documentNumber).toMatch(/^ADJ-\d{5}$/);
+
+    // The balance is updated
+    const level = await prisma.stockLevel.findFirst({
+      where: { productId: 'product-sku002', storeId: 'store-b01' },
+    });
+    expect(level!.quantity).toBe(13);
+
+    // The ledger records the full audit trail
+    const movement = await prisma.stockMovement.findFirst({
+      where: { productId: 'product-sku002', storeId: 'store-b01', type: 'ADJUSTMENT' },
+    });
+    expect(movement).toMatchObject({
+      delta: 8,
+      balanceBefore: 5,
+      balanceAfter: 13,
+      type: 'ADJUSTMENT',
+      sourceDocument: result.documentNumber,
+      actorId: 'mgr-1',
+    });
+    expect(movement!.createdAt).toBeInstanceOf(Date);
+
+    // The adjustment is audited
+    const audit = await prisma.auditRecord.findFirst({
+      where: { action: 'stock.adjust', outcome: 'success' },
+    });
+    expect(audit).toMatchObject({
+      actorId: 'mgr-1',
+      action: 'stock.adjust',
+      entity: 'stock',
+      entityId: 'product-sku002:store-b01',
+      outcome: 'success',
+    });
+    expect(audit!.createdAt).toBeInstanceOf(Date);
+  });
+
+  it('adjust() decreases stock with a reason and the ledger shows the signed delta', async () => {
+    const controller = new InventoryController(prisma as unknown as PrismaService);
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'product-sku001', storeId: 'store-b01', delta: -3, reason: 'Damaged goods writeoff' },
+      { context: {} },
+    );
+
+    expect(result).toMatchObject({
+      balanceBefore: 10,
+      balanceAfter: 7,
+      delta: -3,
+    });
+
+    const movement = await prisma.stockMovement.findFirst({
+      where: { productId: 'product-sku001', storeId: 'store-b01', type: 'ADJUSTMENT' },
+    });
+    expect(movement).toMatchObject({
+      delta: -3,
+      balanceBefore: 10,
+      balanceAfter: 7,
+      type: 'ADJUSTMENT',
+    });
+  });
+
+  it('adjust() rejects a decrease larger than the available balance and audits the failure', async () => {
+    const controller = new InventoryController(prisma as unknown as PrismaService);
+
+    // SKU002@B01 has balance 5; attempting -6 must be rejected
+    const promise = call(
+      controller.adjust(manager),
+      { productId: 'product-sku002', storeId: 'store-b01', delta: -6, reason: 'Attempted over-adjustment' },
+      { context: {} },
+    );
+
+    await expect(promise).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+      message: expect.stringContaining('ไม่เพียงพอ'),
+    });
+
+    // The balance is unchanged
+    const level = await prisma.stockLevel.findFirst({
+      where: { productId: 'product-sku002', storeId: 'store-b01' },
+    });
+    expect(level!.quantity).toBe(5);
+
+    // No movement was written (rolled back)
+    const movements = await prisma.stockMovement.count();
+    expect(movements).toBe(0);
+
+    // The failure is audited
+    const audit = await prisma.auditRecord.findFirst({
+      where: { action: 'stock.adjust', outcome: 'failure' },
+    });
+    expect(audit).toMatchObject({
+      actorId: 'mgr-1',
+      action: 'stock.adjust',
+      entity: 'stock',
+      entityId: '',
+      outcome: 'failure',
+    });
+  });
+
+  it('adjust() creates the stock level row when it does not exist (first stock at a new store)', async () => {
+    const controller = new InventoryController(prisma as unknown as PrismaService);
+
+    // SKU001@B02 has a row with quantity 0; delete it to simulate a product never seen at B02 yet
+    await prisma.stockLevel.deleteMany({
+      where: { productId: 'product-sku001', storeId: 'store-b02' },
+    });
+
+    const result = await call(
+      controller.adjust(manager),
+      { productId: 'product-sku001', storeId: 'store-b02', delta: 20, reason: 'Initial stock at new branch' },
+      { context: {} },
+    );
+
+    expect(result).toMatchObject({
+      balanceBefore: 0,
+      balanceAfter: 20,
+      delta: 20,
+    });
+
+    const level = await prisma.stockLevel.findFirst({
+      where: { productId: 'product-sku001', storeId: 'store-b02' },
+    });
+    expect(level).toMatchObject({
+      productId: 'product-sku001',
+      storeId: 'store-b02',
+      quantity: 20,
+      reorderThreshold: 0,
+    });
+  });
+});
